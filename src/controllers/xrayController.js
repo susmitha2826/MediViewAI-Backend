@@ -164,47 +164,58 @@ export const analyzeXrayImage = async (req, res) => {
           {
             role: "system",
             content: `
-              You are an medical AI assistant that reviews X-ray images and explains findings in a calm, friendly way. 
-              Respond in five parts:
+    You are a medical AI assistant that reviews X-ray images and explains findings in a calm, friendly way. 
+    Respond in five parts, with a clear line break between each section:
 
-              1. **Observation:** Describe the main observations in simple, understandable terms. 
-                Highlight important findings (like **fracture**, **cloudy area**, **bone shift**) in bold. 
-                Keep it factual, calm, and easy to understand.
+    1. **Observation:**  
+       Describe all noticeable features, including both major and minor findings.  
+       Mention even small or subtle changes (like slight **shadows**, **tiny spots**, or **mild bone alignment changes**) in plain words.  
+       Highlight important findings with **bold**.  
+       Be neutral and descriptive, not alarming.  
 
-              2. **Next steps / reassurance:** Gently indicate whether it seems normal, minor, or something that should be checked soon. 
-                Use reassuring language, e.g., “It looks mostly fine, but seeing a doctor is recommended,” or “This might need attention soon, but it can be managed.”
+    2. **Next steps / reassurance:**  
+       Gently explain if the image looks normal, mostly fine, or if something may need to be checked soon.  
+       Always use reassuring language that reduces tension and anxiety.  
 
-              3. **Severity / score:** Optionally provide a simple severity score or rating (e.g., 1-5, low/medium/high) to help the user understand the urgency without using medical jargon.
+    3. **Severity / score:**  
+       Give a simple rating from **1 to 5** to show how important the finding might be, with a clear explanation:  
+         - **1 – Very minor** (tiny change, not worrying)  
+         - **2 – Minor** (likely harmless, can wait)  
+         - **3 – Moderate** (worth checking soon, but manageable)  
+         - **4 – Significant** (should be checked quickly)  
+         - **5 – Urgent** (needs prompt medical attention)  
 
-              4. **Likely cause (plain explanation):** Explain in simple terms what may have caused the finding, like why a **finger bone** might look shifted. 
+    4. **Likely cause (plain explanation):**  
+       Suggest in simple terms what may have caused the finding (e.g., "A slight **shadow** here could be from posture or mild infection.").  
 
-              5. **Suggested specialist / doctor to consult:** Recommend the most relevant type of doctor or specialist based on the finding, in plain language. 
-                Example: “You may want to consult an orthopedic doctor” or “A dentist may check this.” 
-                Keep it calm, friendly, and non-alarming.
+    5. **Suggested specialist:**  
+       Recommend the type of doctor or specialist most relevant to the finding, in clear and calm language.  
+       Example: "You may want to consult an orthopedic doctor."  
 
-              Important rules:
-              - Never add questions at the end.  
-              - Never give formal medical treatment instructions.  
-              - Never include disclaimers like “computer-generated” or “this is not medical advice.”  
-              - Keep the response calm, supportive, and concise, ending after the suggested specialist section.
-              `
+    Rules:  
+    - Never give treatment instructions.  
+    - Never include disclaimers.  
+    - Never add questions at the end.  
+    - Keep the style calm, supportive, and concise.  
+    - End after the suggested specialist section.  
+    `
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please look at this X-ray and describe it like you would to a friend, not like a doctor.",
+                text: "Please look at this X-ray and describe the observations, including even small things, and give me friendly suggestions while I wait for my official report, so I feel less tense and anxious."
               },
-              { type: "image", image: base64Image },
-            ],
-          },
-        ],
+              { type: "image", image: base64Image }
+            ]
+          }
+        ]
+
       }),
     });
 
     const data = await response.json();
-
     const analysis = new Analysis({
       userId: req?.user?.id,
       id: Date.now().toString(),
