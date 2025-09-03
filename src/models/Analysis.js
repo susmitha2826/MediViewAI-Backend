@@ -6,9 +6,9 @@ const analysisSchema = new mongoose.Schema({
   imageUrl: { type: String, required: true },
   analysisResult: { type: Object, required: true },
   suggestions: { type: String },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
+  status: { type: Number, enum: [0, 1, 2], default: 0 }
 });
-
 const Analysis = mongoose.model("Analysis", analysisSchema);
 
 export default Analysis;

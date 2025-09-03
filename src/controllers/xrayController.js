@@ -5,6 +5,8 @@ import Analysis from "../models/Analysis.js";
 import { analyzeXray } from "../services/aiService.js";
 import { generateSuggestion } from "../services/gptService.js";
 import fetch from "node-fetch";
+import OpenAI from "openai";
+
 
 // export const uploadXray = async (req, res) => {
 //   try {
@@ -164,55 +166,33 @@ export const analyzeXrayImage = async (req, res) => {
           {
             role: "system",
             content: `
-    You are a medical AI assistant that reviews X-ray images and explains findings in a calm, friendly way. 
-    Respond in five parts, with a clear line break between each section:
+                You are an AI assistant that analyzes medical images and reports (X-rays, MRIs, CT scans, lab reports, or clinical notes). 
+                Your job is to carefully observe and explain what is seen. Follow these rules:
 
-    1. **Observation:**  
-       Describe all noticeable features, including both major and minor findings.  
-       Mention even small or subtle changes (like slight **shadows**, **tiny spots**, or **mild bone alignment changes**) in plain words.  
-       Highlight important findings with **bold**.  
-       Be neutral and descriptive, not alarming.  
-
-    2. **Next steps / reassurance:**  
-       Gently explain if the image looks normal, mostly fine, or if something may need to be checked soon.  
-       Always use reassuring language that reduces tension and anxiety.  
-
-    3. **Severity / score:**  
-       Give a simple rating from **1 to 5** to show how important the finding might be, with a clear explanation:  
-         - **1 – Very minor** (tiny change, not worrying)  
-         - **2 – Minor** (likely harmless, can wait)  
-         - **3 – Moderate** (worth checking soon, but manageable)  
-         - **4 – Significant** (should be checked quickly)  
-         - **5 – Urgent** (needs prompt medical attention)  
-
-    4. **Likely cause (plain explanation):**  
-       Suggest in simple terms what may have caused the finding (e.g., "A slight **shadow** here could be from posture or mild infection.").  
-
-    5. **Suggested specialist:**  
-       Recommend the type of doctor or specialist most relevant to the finding, in clear and calm language.  
-       Example: "You may want to consult an orthopedic doctor."  
-
-    Rules:  
-    - Never give treatment instructions.  
-    - Never include disclaimers.  
-    - Never add questions at the end.  
-    - Keep the style calm, supportive, and concise.  
-    - End after the suggested specialist section.  
-    `
+                1. Always describe any important findings clearly (e.g., fractures, fluid, swelling, abnormal growths). Do not avoid stating them.
+                2. Explain everything in simple, everyday language that a friend would use. 
+                  Example: instead of "pulmonary edema," say "extra water in the lungs that makes breathing harder."
+                3. Keep the explanation supportive and reassuring, but don’t hide possible concerns.
+                4. Do not use headings, bullet points, or bold text. Just write one clear, friendly paragraph.
+                5. End every response with this disclaimer: \n
+                
+                  "⚠️ This is a computer-generated analysis. Please consult a qualified doctor for full details."
+                `
           },
+
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: "Please look at this X-ray and describe the observations, including even small things, and give me friendly suggestions while I wait for my official report, so I feel less tense and anxious."
-              },
+              { type: "text", text: "Please analyze this X-ray and explain in simple words what it shows. To Help Users To UnderStand there Medical Reports (xray, mri , ct, medical reports" },
               { type: "image", image: base64Image }
             ]
           }
-        ]
 
-      }),
+        ]
+      })
+
+
+
     });
 
     const data = await response.json();
@@ -234,5 +214,99 @@ export const analyzeXrayImage = async (req, res) => {
   } catch (error) {
     console.error("Controller error:", error);
     res.status(500).json({ error: "Failed to analyze image" });
+  }
+};
+
+
+export const translate = async (req, res) => {
+  try {
+    const { text, languageName } = req.body;
+
+    if (!text || !languageName) {
+      return res.status(400).json({ error: "text and languageName are required" });
+    }
+    const response = await fetch('https://toolkit.rork.com/text/llm/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional medical translator. Translate the following medical analysis text to ${languageName}. Maintain the medical accuracy and friendly, reassuring tone. Keep the same structure and formatting. Only return the translated text, nothing else.`
+          },
+          {
+            role: 'user',
+            content: text
+          }
+        ]
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Translation failed');
+    }
+    const data = await response.json();
+    const translatedText = data.completion;
+
+    res.status(200).json({
+      status: "success",
+      message: "X-ray analysis completed",
+      data: translatedText,
+    });
+  } catch (err) {
+    console.error("Translation API error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Translation failed" });
+  }
+};
+
+
+// backend/controllers/ttsController.js
+
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // set in .env
+});
+
+// Generate speech and return an audio file URL
+export const generateSpeech = async (req, res) => {
+  try {
+    const { text, lang } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: "No text provided" });
+    }
+
+    // Pick a voice (OpenAI has voices: alloy, verse, shimmer, etc.)
+    const voice = "alloy";
+
+    const speechResponse = await openai.audio.speech.create({
+      model: "gpt-4o-mini-tts",
+      voice,
+      input: text,
+    });
+    // Convert to buffer
+    const buffer = Buffer.from(await speechResponse.arrayBuffer());
+
+    // Ensure directories exist
+    const ttsDir = path.join(process.cwd(), "public", "tts");
+    if (!fs.existsSync(ttsDir)) {
+      fs.mkdirSync(ttsDir, { recursive: true });
+    }
+
+    // Save file
+    const filename = `tts_${Date.now()}.mp3`;
+    const filePath = path.join(ttsDir, filename);
+    fs.writeFileSync(filePath, buffer);
+
+    // Return URL
+    // res.json({ audioUrl: `/tts/${filename}` });
+
+    // do this:
+const fullUrl = `${req.protocol}://${req.get("host")}/tts/${filename}`;
+res.json({ audioUrl: fullUrl });
+  } catch (err) {
+    console.error("❌ TTS error:", err);
+    res.status(500).json({ error: "TTS generation failed" });
   }
 };
