@@ -154,7 +154,7 @@ export const uploadXray = async (req, res) => {
 
 export const analyzeMedicalImage = async (req, res) => {
   try {
-    const { base64Image } = req.body;
+   const base64Image = req.body.image;
     if (!base64Image) {
       return res.status(400).json({ msg: "No image provided" });
     }
