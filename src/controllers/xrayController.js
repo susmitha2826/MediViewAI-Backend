@@ -151,11 +151,12 @@ export const uploadXray = async (req, res) => {
 // };
 
 
-export const analyzeXrayImage = async (req, res) => {
+
+export const analyzeMedicalImage = async (req, res) => {
   try {
-    const base64Image = req.body.image;
+    const { base64Image } = req.body;
     if (!base64Image) {
-      return res.status(400).json({ error: "No image provided" });
+      return res.status(400).json({ msg: "No image provided" });
     }
 
     const response = await fetch("https://toolkit.rork.com/text/llm/", {
@@ -166,30 +167,131 @@ export const analyzeXrayImage = async (req, res) => {
           {
             role: "system",
             content: `
-                You are an AI assistant that analyzes medical images and reports (X-rays, MRIs, CT scans, lab reports, or clinical notes). 
-                Your job is to carefully observe and explain what is seen. Follow these rules:
-
-                1. Always describe any important findings clearly (e.g., fractures, fluid, swelling, abnormal growths). Do not avoid stating them.
-                2. Explain everything in simple, everyday language that a friend would use. 
-                  Example: instead of "pulmonary edema," say "extra water in the lungs that makes breathing harder."
-                3. Keep the explanation supportive and reassuring, but don’t hide possible concerns.
-                4. Do not use headings, bullet points, or bold text. Just write one clear, friendly paragraph.
-                5. End every response with this disclaimer: \n
-                
-                  "⚠️ This is a computer-generated analysis. Please consult a qualified doctor for full details."
-                `
+              You are an expert medical assistant and AI image classifier.
+              First, check if this image is a medical image (X-ray, MRI, CT scan, ultrasound, or scanned medical report, typed or handwritten).
+              - If it is NOT a medical image (selfies, flowers, random pictures), respond only with "not medical".
+              - If it IS a medical image, analyze it fully step by step in plain, friendly language, covering:
+                1. Type of medical image
+                2. Body part or area examined
+                3. Main findings
+                4. Explanation
+                5. Reassuring information
+                6. Important reminders or next steps
+              Do not ask questions or give partial explanations.
+              Always remind the user that this is educational information only.
+            `
           },
-
           {
             role: "user",
             content: [
-              { type: "text", text: "Please analyze this X-ray and explain in simple words what it shows. To Help Users To UnderStand there Medical Reports (xray, mri , ct, medical reports" },
+              { type: "image", image: base64Image },
+              {
+                type: "text",
+                text: `
+            Please analyze this medical image (X-ray, MRI, CT scan, or medical report) and if it is medical related only go head furthur otherwise no need.
+            provide a full, friendly, easy-to-understand explanation. 
+            Give all sections completely in one response. 
+            Do NOT ask any questions or suggest additional explanations. 
+            Use plain, everyday language, be supportive and reassuring, and remind the user this is educational only.
+          `
+              },
+            ]
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.completion.toLowerCase().includes("not medical")) {
+      return res.status(400).json({ msg: "This does not appear to be a medical scan or report." });
+    }
+
+    const analysis = new Analysis({
+      userId: req?.user?.id,
+      id: Date.now().toString(),
+      imageUrl: `data:image/jpeg;base64,${base64Image}`,
+      analysisResult: data.completion,
+      timestamp: new Date().toISOString(),
+    });
+
+    await analysis.save();
+
+    res.status(200).json({
+      status: "success",
+      message: "X-ray analysis completed",
+      data: data.completion,
+    });
+  } catch (err) {
+    if (err.message.includes("payload")) {
+      return res.status(413).json({ msg: "Image too large for analysis. Try a smaller image." });
+    }
+    console.error("AnalyzeMedicalImage error:", err);
+    res.status(500).json({ msg: "Failed to analyze image" });
+  }
+};
+
+
+
+export const analyzeXrayImage = async (req, res) => {
+  try {
+    const base64Image = req.body.image;
+    if (!base64Image) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+
+    // --- Step 1: Validate image type ---
+    const isMedical = await checkIfMedicalImage(base64Image); // implement this
+    if (!isMedical) {
+      return res.status(400).json({
+        status: "error",
+        message: "This does not appear to be a medical scan or report. Please upload a valid X-ray, MRI, CT, ultrasound, or scanned medical report."
+      });
+    }
+
+    const response = await fetch("https://toolkit.rork.com/text/llm/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content: `
+        You are an experienced doctor with years of practical medical knowledge. Analyze X-rays, MRIs, CT scans, ultrasounds, and scanned medical reports (typed or handwritten). Explain everything in plain language, step by step.  
+        Do NOT analyze non-medical images such as selfies, flowers, or random pictures.
+
+        Your goal is to explain medical images and reports in a friendly, simple, and easy-to-understand way, as if talking to a close friend or family member. 
+        Always provide a complete step-by-step analysis, covering:
+          1. Type of medical image
+          2. Body part or area examined
+          3. Main findings
+          4. Explanation
+          5. Reassuring information
+          6. Important reminders or next steps
+        Do NOT ask any questions or suggest additional explanations. 
+        The response should be complete on its own and include all necessary information.
+        Always remind the user that this is educational information only and not a substitute for professional medical advice. Advise consulting a qualified healthcare professional when needed.
+      `
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `
+            Please analyze this medical image (X-ray, MRI, CT scan, or medical report) and provide a full, friendly, easy-to-understand explanation. 
+            Give all sections completely in one response. 
+            Do NOT ask any questions or suggest additional explanations. 
+            Use plain, everyday language, be supportive and reassuring, and remind the user this is educational only.
+          `
+              },
               { type: "image", image: base64Image }
             ]
           }
-
         ]
       })
+
 
 
 
@@ -303,8 +405,8 @@ export const generateSpeech = async (req, res) => {
     // res.json({ audioUrl: `/tts/${filename}` });
 
     // do this:
-const fullUrl = `${req.protocol}://${req.get("host")}/tts/${filename}`;
-res.json({ audioUrl: fullUrl });
+    const fullUrl = `${req.protocol}://${req.get("host")}/tts/${filename}`;
+    res.json({ audioUrl: fullUrl });
   } catch (err) {
     console.error("❌ TTS error:", err);
     res.status(500).json({ error: "TTS generation failed" });
