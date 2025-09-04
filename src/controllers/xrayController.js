@@ -154,7 +154,7 @@ export const uploadXray = async (req, res) => {
 
 export const analyzeMedicalImage = async (req, res) => {
   try {
-   const base64Image = req.body.image;
+    const base64Image = req.body.image;
     if (!base64Image) {
       return res.status(400).json({ msg: "No image provided" });
     }
@@ -164,23 +164,31 @@ export const analyzeMedicalImage = async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: [
-          {
-            role: "system",
-            content: `
-              You are an expert medical assistant and AI image classifier.
-              First, check if this image is a medical image (X-ray, MRI, CT scan, ultrasound, or scanned medical report, typed or handwritten).
-              - If it is NOT a medical image (selfies, flowers, random pictures), respond only with "not medical".
-              - If it IS a medical image, analyze it fully step by step in plain, friendly language, covering:
-                1. Type of medical image
-                2. Body part or area examined
-                3. Main findings
-                4. Explanation
-                5. Reassuring information
-                6. Important reminders or next steps
-              Do not ask questions or give partial explanations.
-              Always remind the user that this is educational information only.
-            `
-          },
+{
+  role: "system",
+  content: `
+    You are an expert senior medical assistant and AI image classifier with extensive medical experience, responding in a friendly and reassuring manner.
+
+    First, check if this image is a medical image (X-ray, MRI, CT scan, ultrasound, or scanned medical report, typed or handwritten).
+    - If it is NOT a medical image (selfies, flowers, random pictures), respond only with "not medical".
+    - If it IS a medical image, provide a full analysis in plain, friendly language.
+
+    Your analysis should always follow this structure internally:
+      • Type of medical image  
+      • Body part or area examined  
+      • Main findings  
+      • Explanation  
+      • Reassurance  
+      • Important reminders or next steps  
+
+    BUT — do not use numbered lists, bullet points, or section headings.  
+    Instead, weave these elements into a natural, flowing paragraph that feels conversational, clear, and reassuring.  
+
+    Always end with this exact reminder:  
+    "This is a computer-generated response and not a replacement for professional medical advice."
+  `
+},
+
           {
             role: "user",
             content: [
@@ -379,7 +387,6 @@ export const generateSpeech = async (req, res) => {
       return res.status(400).json({ error: "No text provided" });
     }
 
-    // Pick a voice (OpenAI has voices: alloy, verse, shimmer, etc.)
     const voice = "alloy";
 
     const speechResponse = await openai.audio.speech.create({
@@ -387,28 +394,18 @@ export const generateSpeech = async (req, res) => {
       voice,
       input: text,
     });
+
     // Convert to buffer
     const buffer = Buffer.from(await speechResponse.arrayBuffer());
 
-    // Ensure directories exist
-    const ttsDir = path.join(process.cwd(), "public", "tts");
-    if (!fs.existsSync(ttsDir)) {
-      fs.mkdirSync(ttsDir, { recursive: true });
-    }
-
-    // Save file
-    const filename = `tts_${Date.now()}.mp3`;
-    const filePath = path.join(ttsDir, filename);
-    fs.writeFileSync(filePath, buffer);
-
-    // Return URL
-    // res.json({ audioUrl: `/tts/${filename}` });
-
-    // do this:
-    const fullUrl = `${req.protocol}://${req.get("host")}/tts/${filename}`;
-    res.json({ audioUrl: fullUrl });
+    // Send as base64 so frontend can play
+    res.json({
+      audioBase64: buffer.toString("base64"),
+      mimeType: "audio/mpeg",
+    });
   } catch (err) {
     console.error("❌ TTS error:", err);
     res.status(500).json({ error: "TTS generation failed" });
   }
 };
+
