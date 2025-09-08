@@ -152,93 +152,164 @@ export const uploadXray = async (req, res) => {
 
 
 
-export const analyzeMedicalImage = async (req, res) => {
+export const analyzeMedicalImages = async (req, res) => {
   try {
-    const base64Image = req.body.image;
-    if (!base64Image) {
-      return res.status(400).json({ msg: "No image provided" });
+    const base64Images = req.body.images;
+    if (!base64Images || !Array.isArray(base64Images) || base64Images.length === 0) {
+      return res.status(400).json({ msg: "No images provided" });
     }
 
-    const response = await fetch("https://toolkit.rork.com/text/llm/", {
+    // Step 1: Analyze all images in parallel using your existing prompt
+    const individualAnalyses = await Promise.all(
+      base64Images.map(async (base64Image, index) => {
+        try {
+          const response = await fetch("https://toolkit.rork.com/text/llm/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: [
+                {
+                  role: "system",
+                  content: `
+    You are an expert senior medical assistant and AI image classifier with extensive medical experience, responding in a friendly and reassuring manner.
+
+    First, check if this image is a medical image (X-ray, MRI, CT scan, ultrasound, or scanned medical report, typed or handwritten, lab reports, hospital reports).
+    - If it is NOT a medical image (selfies, flowers, random pictures), respond only with "not medical".
+    - If it IS a medical image, provide a full analysis.
+
+    Your analysis should always include **two sections**:
+
+    1. Doctor-Level Explanation: Provide a professional, detailed explanation suitable for a medical audience. Include the type of medical image, body part or area examined, main findings, and any technical interpretations. Write in clear, formal medical language, but avoid using bullet points or numbered lists—make it a natural, flowing paragraph.
+
+    2. Layman-Friendly Explanation: Rewrite the same findings in a friendly, easy-to-understand way for a non-medical audience. Use simple language, analogies if helpful, and a reassuring tone. Make sure it is approachable and clear, so the user can easily grasp what the findings mean for them.
+
+    Always end **last sections** with this exact reminder:
+    "This is a computer-generated response and not a replacement for professional medical advice." and Do NOT ask any questions or suggest additional explanations. 
+  `
+                },
+
+                {
+                  role: "user",
+                  content: [
+                    { type: "image", image: base64Image },
+                    {
+                      type: "text",
+                      text: `
+                        Please analyze this medical image (X-ray, MRI, CT scan, or medical report) and if it is medical related only go head further otherwise no need.
+                        Provide a full, friendly, easy-to-understand explanation. 
+                        Give all sections completely in one response. 
+                        Do NOT ask any questions or suggest additional explanations. 
+                        Use plain, everyday language, be supportive and reassuring, and remind the user this is educational only.
+                      `
+                    }
+                  ]
+                }
+              ]
+            })
+          });
+
+          if (!response.ok) {
+            console.error("Server returned error:", response.status, await response.text());
+            return null;
+          }
+
+          const data = await response.json();
+
+          if (data.completion.toLowerCase().includes("not medical")) {
+            return null; // skip non-medical images
+          }
+
+          return data.completion;
+        } catch (err) {
+          console.error(`Error analyzing page ${index + 1}:`, err);
+          return null;
+        }
+      })
+    );
+
+    const validAnalyses = individualAnalyses.filter(a => a !== null);
+
+    if (validAnalyses.length === 0) {
+      return res.status(400).json({ msg: "⚠️ No medical images found in the upload. Please upload a valid medical report or scan." });
+    }
+
+    // Step 2: Handle single vs multiple images
+    if (validAnalyses.length === 1) {
+      // Only one medical image, return its analysis directly
+      const analysisRecord = new Analysis({
+        userId: req?.user?.id,
+        id: Date.now().toString(),
+        imageUrl: `data:image/jpeg;base64,${base64Images[0]}`,
+        analysisResult: validAnalyses[0],
+        timestamp: new Date().toISOString(),
+      });
+      await analysisRecord.save();
+
+      return res.status(200).json({
+        status: "success",
+        message: "Medical image analysis completed",
+        data: validAnalyses[0],
+      });
+    }
+
+    // Multiple images, combine analyses into one final summary using your prompt style
+    const combinedPrompt = `
+You are an expert senior medical assistant. Here are analyses of multiple images:
+
+${validAnalyses.map((a, i) => `Image ${i + 1}: ${a}`).join("\n\n")}
+
+Summarize all findings strictly in **two sections only**:
+
+1. Doctor-Level Explanation: detailed, professional explanation suitable for medical audience.
+2. Layman-Friendly Explanation: clear, friendly, and easy-to-understand for non-medical users.
+
+Do NOT add any introductory sentences like "Here’s a summary" or anything else. 
+End the reponse with this exact reminder:
+"This is a computer-generated response and not a replacement for professional medical advice."
+
+Do not ask questions or suggest further explanations.
+Use a natural, flowing paragraph style; no bullet points or numbering inside the sections themselves.
+`;
+
+    const finalResponse = await fetch("https://toolkit.rork.com/text/llm/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: [
-{
-  role: "system",
-  content: `
-    You are an expert senior medical assistant and AI image classifier with extensive medical experience, responding in a friendly and reassuring manner.
-
-    First, check if this image is a medical image (X-ray, MRI, CT scan, ultrasound, or scanned medical report, typed or handwritten).
-    - If it is NOT a medical image (selfies, flowers, random pictures), respond only with "not medical".
-    - If it IS a medical image, provide a full analysis in plain, friendly language.
-
-    Your analysis should always follow this structure internally:
-      • Type of medical image  
-      • Body part or area examined  
-      • Main findings  
-      • Explanation  
-      • Reassurance  
-      • Important reminders or next steps  
-
-    BUT — do not use numbered lists, bullet points, or section headings.  
-    Instead, weave these elements into a natural, flowing paragraph that feels conversational, clear, and reassuring.  
-
-    Always end with this exact reminder:  
-    "This is a computer-generated response and not a replacement for professional medical advice."
-  `
-},
-
           {
-            role: "user",
-            content: [
-              { type: "image", image: base64Image },
-              {
-                type: "text",
-                text: `
-            Please analyze this medical image (X-ray, MRI, CT scan, or medical report) and if it is medical related only go head furthur otherwise no need.
-            provide a full, friendly, easy-to-understand explanation. 
-            Give all sections completely in one response. 
-            Do NOT ask any questions or suggest additional explanations. 
-            Use plain, everyday language, be supportive and reassuring, and remind the user this is educational only.
-          `
-              },
-            ]
-          }
+            role: "system",
+            content: `
+              You are an expert senior medical assistant and AI image classifier with extensive medical experience, responding in a friendly and reassuring manner.
+            `
+          },
+          { role: "user", content: combinedPrompt }
         ]
       })
     });
 
-    const data = await response.json();
+    const finalData = await finalResponse.json();
 
-    if (data.completion.toLowerCase().includes("not medical")) {
-      return res.status(400).json({ msg: "This does not appear to be a medical scan or report." });
-    }
-
-    const analysis = new Analysis({
+    // Step 3: Save combined analysis in DB
+    const analysisRecord = new Analysis({
       userId: req?.user?.id,
       id: Date.now().toString(),
-      imageUrl: `data:image/jpeg;base64,${base64Image}`,
-      analysisResult: data.completion,
+      imageUrl: base64Images.map(img => `data:image/jpeg;base64,${img}`),
+      analysisResult: finalData.completion,
       timestamp: new Date().toISOString(),
     });
-
-    await analysis.save();
+    await analysisRecord.save();
 
     res.status(200).json({
       status: "success",
-      message: "X-ray analysis completed",
-      data: data.completion,
+      message: "Medical image analysis completed",
+      data: finalData.completion,
     });
+
   } catch (err) {
-    if (err.message.includes("payload")) {
-      return res.status(413).json({ msg: "Image too large for analysis. Try a smaller image." });
-    }
-    console.error("AnalyzeMedicalImage error:", err);
-    res.status(500).json({ msg: "Failed to analyze image" });
+    console.error("AnalyzeMedicalImages error:", err);
+    res.status(500).json({ msg: "Failed to analyze images" });
   }
 };
-
 
 
 export const analyzeXrayImage = async (req, res) => {

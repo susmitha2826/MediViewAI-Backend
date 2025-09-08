@@ -8,7 +8,7 @@ const openai = new OpenAI({
 });
 
 export const generateSuggestion = async (analysisResult) => {
-  console.log(process.env.OPENAI_API_KEY,"jjj")
+  // console.log(process.env.OPENAI_API_KEY,"jjj")
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
