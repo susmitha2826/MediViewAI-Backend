@@ -185,7 +185,7 @@ If medical, perform a **thorough, systematic analysis**:
 2. **Primary implants/hardware**: Pacemakers, Foreigh Bodies, ICDs, orthopedic devices, stents, surgical clips. Confirm placement, lead/integrity, migration, or complications.  
 3. **Secondary devices or incidental hardware**: Look for additional radiopaque devices (implantable monitors, loop recorders, ports, catheters). Describe location, orientation, and integrity.  
 4. **Fractures**: Acute, healing, subtle, or old; include location, type, displacement, angulation, and callus formation.  
-5. **Foreign bodies**: Metallic or radiopaque, surgical materials, retained fragments.  
+5. **Foreign bodies**: Actively search for all **radiopaque or metallic foreign bodies**, including swallowed objects (rings, coins, pins), retained surgical materials, bullets, or fragments. Specify location (e.g., esophagus, stomach, airway, soft tissues), size, shape, orientation, and potential clinical significance. Explicitly differentiate between **expected devices and unexpected foreign objects**. 
 6. **Soft tissues, bones, and joints**: Subtle lesions, sclerotic/lytic foci, deformities, dislocations, angulations, calcifications.  
 7. **Thoracic and abdominal structures**: Examine lungs, mediastinum, heart, diaphragm, and upper abdominal structures. Note subtle or incidental findings, small pneumothoraces, chronic changes, or **radiopaque foreign objects in the esophagus, stomach, or soft tissues**.
 
