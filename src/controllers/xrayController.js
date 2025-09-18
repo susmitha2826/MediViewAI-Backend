@@ -2,7 +2,7 @@ import s3 from "../config/s3.js";
 import fs from "fs";
 import path from "path";
 import Analysis from "../models/Analysis.js";
-import { analyzeXray } from "../services/aiService.js";
+import { analyzeXray, analyzeXray_cxr } from "../services/aiService.js";
 import { generateSuggestion } from "../services/gptService.js";
 import fetch from "node-fetch";
 import OpenAI from "openai";
@@ -182,12 +182,12 @@ You are a senior radiologist AI assistant. Only respond to medical images (X-ray
 If medical, perform a **thorough, systematic analysis**:
 
 1. **Confirm modality, view, and orientation**: Use R/L markers if present, and anatomical landmarks (heart shadow, gastric bubble, diaphragm). Explicitly state any uncertainty.  
-2. **Primary implants/hardware**: Pacemakers, ICDs, orthopedic devices, stents, surgical clips. Confirm placement, lead/integrity, migration, or complications.  
+2. **Primary implants/hardware**: Pacemakers, Foreigh Bodies, ICDs, orthopedic devices, stents, surgical clips. Confirm placement, lead/integrity, migration, or complications.  
 3. **Secondary devices or incidental hardware**: Look for additional radiopaque devices (implantable monitors, loop recorders, ports, catheters). Describe location, orientation, and integrity.  
 4. **Fractures**: Acute, healing, subtle, or old; include location, type, displacement, angulation, and callus formation.  
 5. **Foreign bodies**: Metallic or radiopaque, surgical materials, retained fragments.  
 6. **Soft tissues, bones, and joints**: Subtle lesions, sclerotic/lytic foci, deformities, dislocations, angulations, calcifications.  
-7. **Thoracic and abdominal structures**: Lungs, mediastinum, heart, diaphragm, pleural spaces, gas patterns. Note subtle or incidental findings such as **fibro-atelectasis, small pneumothoraces, or chronic changes**.  
+7. **Thoracic and abdominal structures**: Examine lungs, mediastinum, heart, diaphragm, and upper abdominal structures. Note subtle or incidental findings, small pneumothoraces, chronic changes, or **radiopaque foreign objects in the esophagus, stomach, or soft tissues**.
 
 **Always report both major and subtle/incidental findings**, even if the study is mostly normal. Explicitly note any **uncertainties or limitations**. Do not overinterpret minor lung opacities unless clearly pathological.
 
@@ -442,7 +442,7 @@ export const analyzeXrayImage = async (req, res) => {
 
 export const uploadXray = async (req, res) => {
   try {
-    const userId = req.user._id;
+    // const userId = req.user._id;
     const file = req.file;
 
     console.log("Received file:", file ? file.originalname : "No file");
@@ -465,6 +465,51 @@ export const uploadXray = async (req, res) => {
 
     // Analyze image using external microservice
     const rawResult = await analyzeXray(file);
+
+    // Generate AI-based suggestions
+    const suggestions = await generateSuggestion(rawResult);
+
+    // Save to DB
+    // const newAnalysis = new Analysis({
+    //   userId,
+    //   imageUrl,
+    //   analysisResult: rawResult,
+    //   suggestions,
+    // });
+    // await newAnalysis.save();
+
+    res.json({ imageUrl, analysisResult: rawResult, suggestions });
+  } catch (err) {
+    console.error("UploadXray error:", err);
+    res.status(500).json({ msg: "Failed to upload and analyze X-ray" });
+  }
+};
+
+export const uploadXray_CXR = async (req, res) => {
+  try {
+    // const userId = req.user._id;
+    const file = req.file;
+
+    console.log("Received file:", file ? file.originalname : "No file");
+    if (!file) {
+      return res.status(400).json({ msg: "No X-ray file uploaded" });
+    }
+
+    // ---------- Local folder storing -------------------
+    const uploadDir = path.join(process.cwd(), "uploads/xrays");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Save file locally
+    const fileName = `${Date.now()}_${file.originalname}`;
+    const filePath = path.join(uploadDir, fileName);
+    fs.writeFileSync(filePath, file.buffer);
+
+    const imageUrl = `/uploads/xrays/${fileName}`; // relative path for frontend access
+
+    // Analyze image using external microservice
+    const rawResult = await analyzeXray_cxr(file);
 
     // Generate AI-based suggestions
     const suggestions = await generateSuggestion(rawResult);
