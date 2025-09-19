@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false 
+    rejectUnauthorized: false
   }
 });
 
@@ -26,8 +26,8 @@ const sendOtp = async (email, otp) => {
     });
 
     // Debug info
-    console.log("✅ OTP email sent:", info.messageId);
-    console.log("📧 Preview URL (for testing):", nodemailer.getTestMessageUrl?.(info));
+    // console.log("✅ OTP email sent:", info.messageId);
+    // console.log("📧 Preview URL (for testing):", nodemailer.getTestMessageUrl?.(info));
 
     return {
       status: "success",

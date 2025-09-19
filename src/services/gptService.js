@@ -7,59 +7,52 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const generateSuggestion = async (analysisResult) => {
-  // Step 1: Define probability threshold
+export const generateSuggestion = async (analysisResults) => {
   const threshold = 0.6;
 
-  // Step 2: Define clinically relevant features for general CXR + orthopedic/foreign body focus
-  const clinicallyRelevant = [
-    "Consolidation",
-    "Atelectasis",
-    "Infiltration",
-    "Pneumonia",
-    "Effusion",
-    "Lung Opacity",
-    "Fracture",
-    // "Implant",       // new
-    // "Foreign Body"   // new
-  ];
+  // Step 1: Combine all results, keeping the maximum probability per finding
+  const combinedFindings = {};
+  for (const result of analysisResults) {
+    if (!result || typeof result !== "object") continue;
 
-  // Step 3: Filter analysis results
-  const relevantFindings = {};
-  for (const [key, value] of Object.entries(analysisResult.probabilities)) {
-    if (value >= threshold && clinicallyRelevant.includes(key)) {
-      relevantFindings[key] = value;
+    for (const [key, value] of Object.entries(result)) {
+      if (!(key in combinedFindings) || value > combinedFindings[key]) {
+        combinedFindings[key] = value;
+      }
     }
   }
 
-  // Step 4: Build prompt for LLM
+  // Step 2: Apply threshold filter
+  const relevantFindings = {};
+  for (const [key, value] of Object.entries(combinedFindings)) {
+    if (value >= threshold) relevantFindings[key] = value;
+  }
+
+  // Step 3: Build strict prompt
   const prompt = `
-      Given the following filtered X-ray analysis data, generate a structured response with two sections:
+You are a medical AI assistant. Analyze the following chest X-ray abnormalities (filtered above threshold):
 
-      1. Doctor-Level Explanation: Provide a professional, detailed medical description suitable for doctors. Include all findings, abnormalities, implants, fractures, foreign bodies, and technical observations. Write in clear, formal medical language as a natural paragraph.
+${JSON.stringify(relevantFindings, null, 2)}
 
-      2. Layman-Friendly Explanation: Provide a simple explanation suitable for patients, describing the same findings in plain language without medical jargon.
+Output exactly two sections:
 
-      Only include findings present in the filtered data. Do not add unrelated abnormalities. Use the following filtered analysis data:
-      ${JSON.stringify(relevantFindings, null, 2)}
-      `;
+**Doctor-Level Explanation**: Professional paragraph describing modality, orientation, primary and secondary implants, fractures, foreign bodies, bones, soft tissues, thoracic/abdominal structures, and any subtle/incidental findings. Include any uncertainties. Use formal flowing medical terminology.  
 
-  // Step 5: Call OpenAI to generate explanations
+**Layman-Friendly Explanation**: One paragraph for patients explaining the same findings in simple language, using analogies for devices, fractures, or foreign bodies. Reassure for benign or expected findings, highlight urgent issues clearly, and note incidental or secondary devices and subtle changes in non-alarming terms.  
+
+End with this disclaimer exactly:  
+"This is a computer-generated response and not a replacement for professional medical advice."
+`;
+
+  // Step 4: Call LLM
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      {
-        role: "system",
-        content: "You are an expert medical assistant. Provide accurate, detailed medical analysis."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
+      { role: "system", content: "You are an expert radiologist assistant." },
+      { role: "user", content: prompt },
     ],
   });
 
-  // Step 6: Return structured explanation
   return response.choices[0].message.content;
 };
 
