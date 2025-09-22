@@ -36,12 +36,13 @@ export const analyzeMedicalImages = async (req, res) => {
                       If medical, perform a **thorough, systematic analysis**:
 
                       1. **Confirm modality, view, and orientation**: Use R/L markers if present, and anatomical landmarks (heart shadow, gastric bubble, diaphragm). Explicitly state any uncertainty.  
-                      2. **Primary implants/hardware**: Pacemakers, Foreigh Bodies, ICDs, orthopedic devices, stents, surgical clips. Confirm placement, lead/integrity, migration, or complications.  
+                      2. **Primary Hardware/Artifacts/Implants**: Identify and describe any hardware, artifacts, Pacemakers, Foreigh Bodies, ICDs, orthopedic devices, stents, surgical clips or implants present in the image to aid in decision support. Confirm placement, lead/integrity, migration, or complications.
                       3. **Secondary devices or incidental hardware**: Look for additional radiopaque devices (implantable monitors, loop recorders, ports, catheters). Describe location, orientation, and integrity.  
                       4. **Fractures**: Acute, healing, subtle, or old; include location, type, displacement, angulation, and callus formation.  
                       5. **Foreign bodies**: Actively search for all **radiopaque or metallic foreign bodies**, including swallowed objects (rings, coins, pins), retained surgical materials, bullets,pacemaker or fragments. Specify location (e.g., esophagus, stomach, airway, soft tissues), size, shape, orientation, and potential clinical significance. Explicitly differentiate between **expected devices and unexpected foreign objects**. 
                       6. **Soft tissues, bones, and joints**: Subtle lesions, sclerotic/lytic foci, deformities, dislocations, angulations, calcifications.  
                       7. **Thoracic and abdominal structures**: Examine lungs, mediastinum, heart, diaphragm, and upper abdominal structures. Note subtle or incidental findings, small pneumothoraces, chronic changes, or **radiopaque foreign objects in the esophagus, stomach, or soft tissues**.
+                      8. **Hardware/Artifacts/Implants**: Identify and describe any hardware, artifacts, or implants present in the image to aid in decision support.
 
                       **Always report both major and subtle/incidental findings**, even if the study is mostly normal. Explicitly note any **uncertainties or limitations**. Do not overinterpret minor lung opacities unless clearly pathological.
 
@@ -49,7 +50,7 @@ export const analyzeMedicalImages = async (req, res) => {
 
                       **Doctor-Level Explanation**: Professional paragraph describing modality, orientation, primary and secondary implants, fractures, foreign bodies, bones, soft tissues, thoracic/abdominal structures, and any subtle/incidental findings. Include any uncertainties. Use formal flowing medical terminology.  
 
-                      **Layman-Friendly Explanation**: One paragraph for patients explaining the same findings in simple language, using analogies for devices, fractures, or foreign bodies. Reassure for benign or expected findings, highlight urgent issues clearly, and note incidental or secondary devices and subtle changes in non-alarming terms.  
+                      **Layman-Friendly Explanation**: Provide a one-paragraph explanation of the medical findings in simple, everyday language that patients can easily understand. Use analogies where helpful (e.g., comparing devices to tools, fractures to cracks, or foreign bodies to small objects stuck inside). Clearly explain what the abnormalities may suggest (such as a common cold, cough, pneumonia, or foreign body). Reassure when findings are benign or expected, and highlight urgent issues in straightforward terms. If devices, secondary changes, or incidental findings are present, describe them in a calm, non-alarming way while still noting their significance.
 
                       End with: "This is a computer-generated response and not a replacement for professional medical advice." No questions, suggestions, or extras.
                       `
@@ -365,7 +366,7 @@ export const cheXnetModel = async (req, res) => {
     //   id: Date.now().toString(),
     //   // imageUrl: base64Images.map(img => `data:image/jpeg;base64,${img}`),
     //   analysisResult: finalSuggestion,
-    //   timestamp: new Date().toISOString(),
+    //   timestamp: new Date().toISOString(), 
     // });
     // await analysisRecord.save();
 
