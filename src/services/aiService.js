@@ -4,7 +4,6 @@ import FormData from "form-data";
 import request from "request";
 
 
-
 export const analyzeXray = async (filePath) => {
   try {
     const form = new FormData();
@@ -27,7 +26,6 @@ export const analyzeXray = async (filePath) => {
     throw new Error("X-ray analysis failed");
   }
 };
-
 
 
 export const analyzeXray_cxr = async (file, task = null, returnHeatmap = false) => {
