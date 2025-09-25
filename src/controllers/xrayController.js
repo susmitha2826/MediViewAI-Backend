@@ -162,7 +162,7 @@ export const analyzeMedicalImages_python = async (req, res) => {
             role: "user",
             content: [
               { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
-              { type: "text", text: "I am a Trainee Radiologist generate report with all possible pathologies and fractures along with hardware's/Artefacts/Implants in the image for decision support.Generate a structured radiology report from this chest X-ray for decision support." }
+              { type: "text", text: "I am a Trainee Radiologist generate report with all possible pathologies, implants, and fractures along with hardware's/Artefacts/Implants in the image for decision support. Generate a structured radiology report from this chest X-ray for decision support." }
             ]
           }
         ];
@@ -534,41 +534,44 @@ export const analyseByOpenAi = async (req, res) => {
     }));
 
     // Call OpenAI Chat Completion API (multimodal model)
-const response = await openai.responses.create({
-  model: "gpt-4.1-mini",
-  input: [
-    {
-      role: "user",
-      content: [
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [
         {
-          type: "input_text",
-          text: `
-I am a Trainee Radiologist. Analyze all provided medical images carefully. Images may be of different views or body parts.  
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: `
+                  I am a Trainee Radiologist. Analyze all provided medical data carefully. Inputs may include **medical images (X-rays, CT, MRI), lab reports, or other clinical imaging**.  
 
-**Critical instructions:**  
-1. Detect **all abnormalities, implants, metallic devices, foreign bodies, fractures, lung effusions, pneumonia, or any other pathologies** anywhere in the imaged field.  
-2. If there is any **metallic or radiopaque device in another part of the body**, such as a pacemaker in the chest visible on a leg X-ray, **always report it explicitly**, even if unrelated to the primary region.  
-3. Detect **all imaging artifacts**, including grid lines, patient hair, or any technical artifact. For each artifact, describe **type, location, orientation, and approximate size if visible**.  
-4. Include **subtle or incidental findings**, and do not omit small devices, partially visible implants, or ambiguous foreign bodies.  
-5. If uncertain about a metallic object, implant, or artifact, provide possible differentials (e.g., surgical clip vs. external artifact).  
+                  **Critical instructions:**  
+                  1. Detect **all abnormalities, implants, metallic devices, foreign bodies, fractures, lung effusions, pneumonia, tumors, lab abnormalities, or any other pathologies**.  
+                  2. If there is any **metallic or radiopaque device in another part of the body**, such as a pacemaker visible outside the primary region, **always report it explicitly**, even if unrelated to the main focus.  
+                  3. Detect **all imaging artifacts**, including grid lines, patient hair, or technical artifacts. For each artifact, describe **type, location, orientation, and approximate size if visible**.  
+                  4. Include **subtle, incidental, or partially visible findings**, and do not omit small devices, ambiguous foreign bodies, or minor lab abnormalities.  
+                  5. If uncertain about a finding, implant, or artifact, provide possible differentials (e.g., surgical clip vs. external object, benign vs. malignant lab anomaly). 
+                  6. If any input is non-medical, respond with **"This is not a medical image/document"** for that item only.
 
-Output separately for each image:
 
-**Image 1:**  
-- **Doctor-Level Explanation**: Professional, detailed paragraph describing modality, orientation, bones, soft tissues, relevant organs, implants (explicitly mention any metallic devices including intracardiac devices), fractures, foreign bodies, artifacts (with location, orientation, and size), and subtle or incidental findings.  
-- **Layman-Friendly Explanation**: Clear, simple paragraph explaining the same findings in plain language. Use analogies for devices (e.g., “a small patch inside the heart”), fractures, or foreign bodies. Describe artifacts simply (“lines from the scanner” or “hair over the image”). Reassure for benign findings and highlight urgent findings.  
+                  Output separately for each input:
 
-**Image 2:** Repeat same structure for each additional image.  
+                  **Item 1:**  
+                  - **Doctor-Level Explanation**: Professional, detailed paragraph describing modality (or document type), orientation, bones, soft tissues, relevant organs, implants (explicitly mention any metallic devices), fractures, foreign bodies, artifacts (with location, orientation, and size), lab abnormalities, and subtle or incidental findings.  
+                  - **Layman-Friendly Explanation**: Clear, simple paragraph explaining the same findings in plain language. Use analogies for devices (e.g., “a small patch inside the heart”), fractures, foreign bodies, or lab abnormalities. Describe artifacts simply (“lines from the scanner” or “hair over the image”). Reassure for benign findings and highlight urgent findings.  
 
-End with this exact disclaimer:  
-This is a computer-generated response and not a replacement for professional medical advice.
+                  **Item 2:** Repeat same structure for each additional input.  
+
+                  End with this exact disclaimer:  
+                  This is a computer-generated response and not a replacement for professional medical advice.
           `
-        },
-        ...imageInputs
+            },
+            ...imageInputs
+          ]
+        }
       ]
-    }
-  ]
-});
+    });
+
 
 
 
