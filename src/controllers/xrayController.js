@@ -141,7 +141,7 @@ const openai = new OpenAI({
 export const analyzeMedicalImages_python = async (req, res) => {
   try {
     const base64Image = req.body.image;
-    console.log("📥 Incoming request for single image");
+    // console.log("📥 Incoming request for single image");
 
     if (!base64Image || typeof base64Image !== 'string') {
       console.warn("⚠️ No valid base64 image provided");
@@ -151,7 +151,7 @@ export const analyzeMedicalImages_python = async (req, res) => {
     // Helper function for analysis with retry
     const analyzeImage = async (base64Image, retryCount = 0) => {
       try {
-        console.log(`🔎 Analyzing image, attempt ${retryCount + 1}`);
+        // console.log(`🔎 Analyzing image, attempt ${retryCount + 1}`);
 
         const messages = [
           {
@@ -175,21 +175,21 @@ export const analyzeMedicalImages_python = async (req, res) => {
         });
 
         const result = response.choices[0].message.content.trim();
-        console.log("✅ API analysis result:", result);
+        // console.log("✅ API analysis result:", result);
 
         return result || "No significant findings observed - 80%";
 
       } catch (err) {
         console.error(`💥 Error analyzing image:`, err);
         if (retryCount < 2) {
-          console.log(`🔄 Retrying image analysis`);
+          // console.log(`🔄 Retrying image analysis`);
           return await analyzeImage(base64Image, retryCount + 1);
         }
         return null;
       }
     };
 
-    console.log("🚀 Starting image analysis...");
+    // console.log("🚀 Starting image analysis...");
     // const analysisResult = await analyzeImage(base64Image);
 
     // if (!analysisResult) {
@@ -221,7 +221,7 @@ export const analyzeMedicalImages_python = async (req, res) => {
 
     });
 
-    console.log(response2.output_text, "444444444444444444444444444");
+    // console.log(response2.output_text, "444444444444444444444444444");
     const result41 = response2?.output_text
 
     // // Save analysis to DB
@@ -451,7 +451,7 @@ export const analyzeMedicalImages = async (req, res) => {
 export const analyzeMedicalRork = async (req, res) => {
   try {
     const base64Image = req.body.image;
-    console.log("📥 Incoming request for single image");
+    // console.log("📥 Incoming request for single image");
 
     if (!base64Image || typeof base64Image !== "string") {
       console.warn("⚠️ No valid base64 image provided");
@@ -504,12 +504,10 @@ Make sure every section is filled, even if findings are normal.
 
     });
 
-    console.log(chatCompletion.choices[0].message.content, "chatCompletionchatCompletionchatCompletionchatCompletion");
-
-
+    // console.log(chatCompletion.choices[0].message.content, "chatCompletionchatCompletionchatCompletionchatCompletion");
 
     const result = chatCompletion.choices[0].message.content || "No findings.";
-    console.log("✅ API analysis result:", result);
+    // console.log("✅ API analysis result:", result);
 
     res.json({ report: result });
   } catch (err) {
