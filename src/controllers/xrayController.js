@@ -410,9 +410,9 @@ export const analyzeMedicalImages = async (req, res) => {
             - Any variations across images (e.g., a finding visible in one view but not in another) should be clearly noted and integrated into the overall interpretation.
             - Ensure consistency in descriptions and explicitly note any uncertainties.
 
-            Doctor-Level Explanation: Provide a professional, cohesive summary for experts that integrates findings across all images in flowing paragraph format, including all subtle, incidental, and major abnormalities, orientation, and device assessment. Avoid bold, markdown, or extra formatting.
+            **Doctor-Level Explanation**: Provide a professional, cohesive summary for experts that integrates findings across all images in flowing paragraph format, including all subtle, incidental, and major abnormalities, orientation, and device assessment. Avoid bold, markdown, or extra formatting.
 
-            Layman-Friendly Explanation: Provide a single patient-friendly paragraph summarizing all findings across images in simple, reassuring language. Explain implants, fractures, and incidental findings with analogies as needed. Note any areas of concern clearly without alarm, and acknowledge any uncertainties.
+            **Layman-Friendly Explanation**: Provide a single patient-friendly paragraph summarizing all findings across images in simple, reassuring language. Explain implants, fractures, and incidental findings with analogies as needed. Note any areas of concern clearly without alarm, and acknowledge any uncertainties.
 
             End with: "This is a computer-generated response and not a replacement for professional medical advice." No intros, questions, or suggestions.
             `;
@@ -573,8 +573,8 @@ export const analyseByOpenAi = async (req, res) => {
                   Output separately for each input:
 
                   **Item 1:**  
-                  - **Doctor-Level Explanation**: Professional, detailed paragraph describing modality (or document type), orientation, bones, soft tissues, relevant organs, implants (explicitly mention any metallic devices), fractures, foreign bodies, artifacts (with location, orientation, and size), lab abnormalities, and subtle or incidental findings.  
-                  - **Layman-Friendly Explanation**: Clear, simple paragraph explaining the same findings in plain language. Use analogies for devices (e.g., “a small patch inside the heart”), fractures, foreign bodies, or lab abnormalities. Describe artifacts simply (“lines from the scanner” or “hair over the image”). Reassure for benign findings and highlight urgent findings.  
+                  **Doctor-Level Explanation**: Professional, detailed paragraph describing modality (or document type), orientation, bones, soft tissues, relevant organs, implants (explicitly mention any metallic devices), fractures, foreign bodies, artifacts (with location, orientation, and size), lab abnormalities, and subtle or incidental findings.  
+                  **Layman-Friendly Explanation**: Clear, simple paragraph explaining the same findings in plain language. Use analogies for devices (e.g., “a small patch inside the heart”), fractures, foreign bodies, or lab abnormalities. Describe artifacts simply (“lines from the scanner” or “hair over the image”). Reassure for benign findings and highlight urgent findings.  
 
                   **Item 2:** Repeat same structure for each additional input.  
 
