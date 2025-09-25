@@ -208,7 +208,25 @@ export const analyzeMedicalImages_python = async (req, res) => {
             {
               type: "input_text",
               text: `
-            I am a Trainee Radiologist,List **only positive findings / abnormalities** visible in this X-ray.Include fractures, pathologies, implants, hardware, **and artifacts**. Provide a **confidence percentage** for each finding. Keep it concise. Specify the **body part imaged**. Exclude normal structures or negative findings. Do not add extra narrative text; only list positive findings.
+                  You are assisting as a radiology scribe. Analyze the uploaded X-ray carefully.  
+
+                  **Instructions:**  
+                  1. First, identify and state the **body part imaged** (e.g., chest, leg, knee joint, pelvis, skull).  
+                  2. List **only positive findings / abnormalities** visible in the image.  
+                    - Include fractures, dislocations, pathologies, joint effusions, implants, metallic devices, hardware, soft tissue abnormalities, and any artifacts (grid lines, hair, motion blur, etc.).  
+                    - Do not include normal structures or negative statements.  
+                  3. For each finding, provide a **confidence percentage** (e.g., “~85% confident”).  
+                  4. Be concise and structured.  
+                  5. If no abnormalities are seen, state: **"No positive findings detected with high confidence."**  
+
+                  **Output format example:**  
+                  Body Part: Chest  
+                  Findings:  
+                  - Right lower lobe pneumonia (~87% confident)  
+                  - Left pleural effusion (~80% confident)  
+                  - Possible pacemaker lead artifact (~75% confident)  
+
+                  End output after listing findings, without extra narrative text.  
         `
             },
             {
@@ -218,8 +236,8 @@ export const analyzeMedicalImages_python = async (req, res) => {
           ]
         }
       ]
-
     });
+
 
     // console.log(response2.output_text, "444444444444444444444444444");
     const result41 = response2?.output_text
@@ -466,26 +484,26 @@ export const analyzeMedicalRork = async (req, res) => {
             {
               "type": "text",
               "text": `
-I am a trainee radiologist. Generate a comprehensive chest radiograph report 
-for decision support. 
-Very important: 
-- Comment explicitly on ANY radiopaque or metallic-looking object, no matter how small, 
-even if it could be an artefact, foreign body, marker, or implant. 
-- If something looks ambiguous, list possible differentials (e.g., surgical clip vs. external artefact).
-- Do not omit such findings.
-Include sections:
-1. Patient Information
-2. Examination Type, Date, Technique
-3. Osseous structures and fractures (including occult possibilities)
-4. Soft tissues and trachea/airway
-5. Heart and mediastinum (with differentials)
-6. Lungs and pleura (with infectious, neoplastic, inflammatory, vascular, traumatic differentials)
-7. Diaphragm and abdomen (visualized portion)
-8. Hardware/Artefacts/Implants (MANDATORY: mention if seen, suspected, or none)
-9. Impression (with subtle findings highlighted)
-10. Recommendations
-Make sure every section is filled, even if findings are normal.
-`
+              I am a trainee radiologist. Generate a comprehensive chest radiograph report 
+              for decision support. 
+              Very important: 
+              - Comment explicitly on ANY radiopaque or metallic-looking object, no matter how small, 
+              even if it could be an artefact, foreign body, marker, or implant. 
+              - If something looks ambiguous, list possible differentials (e.g., surgical clip vs. external artefact).
+              - Do not omit such findings.
+              Include sections:
+              1. Patient Information
+              2. Examination Type, Date, Technique
+              3. Osseous structures and fractures (including occult possibilities)
+              4. Soft tissues and trachea/airway
+              5. Heart and mediastinum (with differentials)
+              6. Lungs and pleura (with infectious, neoplastic, inflammatory, vascular, traumatic differentials)
+              7. Diaphragm and abdomen (visualized portion)
+              8. Hardware/Artefacts/Implants (MANDATORY: mention if seen, suspected, or none)
+              9. Impression (with subtle findings highlighted)
+              10. Recommendations
+              Make sure every section is filled, even if findings are normal.
+              `
 
             },
             { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
