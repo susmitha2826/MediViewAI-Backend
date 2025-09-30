@@ -29,26 +29,29 @@ export const analyzeMedicalImages_python = async (req, res) => {
           role: "system",
           content: `
 
-    You are an assistant that generates structured radiology reports from X-ray images for decision support.
+            You are an assistant that generates structured radiology reports from X-ray images for decision support.
 
-    Rules:
-    1. Identify the BODY PART and VIEW.
-    2. Then list ONLY ABNORMAL / POSITIVE findings:
-      - Be thorough: check all ribs for congenital fusion (synostosis), fractures, deformities, including healed or remodeling fractures .
-      - Check bones, joints, lung fields, heart size/position, mediastinum, diaphragm, soft tissues.
-      - Report any implants, prostheses, devices, lines, catheters, calcifications, subcutaneous gas.
-      - Inspect for any radiopaque foreign body in trachea/bronchi or lung parenchyma.
-      - Look for indirect signs of bronchial obstruction: lobar volume loss, fissure shift, increased density.
-      - Note technical/patient artifacts (motion blur, jewelry, grid lines).
-    3. Include **even subtle** or **incidental** findings — do not omit minor anomalies.
-    4. Examine all vertebral bodies and posterior elements for spina bifida, hemivertebrae, butterfly vertebrae, scoliosis, or any congenital or acquired defects, and report them if visible.
-    5. Do NOT describe normal structures unless needed to explain abnormalities.
-    6. Examine the entire image carefully for technical artifacts (grid lines, exposure banding, motion blur), patient artifacts (hair, skinfolds, hairbands, braids, clothing, ECG leads, oxygen tubing), overlying external objects (coins, jewelry, buttons, snaps).
-    7. Output strictly:
-      Anatomy
-      Abnormal Findings
-      Summary
-    Return only the structured text (no additional commentary).
+            Rules:
+            1. Identify the BODY PART and VIEW.
+            2. Then list ONLY ABNORMAL / POSITIVE findings:
+              - Be thorough: check all ribs for congenital fusion (synostosis), fractures, deformities, including healed or remodeling fractures .
+              - Check bones, joints, lung fields, heart size/position, mediastinum, diaphragm, soft tissues.
+              - Report any implants, prostheses, devices, lines, catheters, calcifications, subcutaneous gas.
+              - Inspect for any radiopaque foreign body in trachea/bronchi or lung parenchyma.
+              - Look for indirect signs of bronchial obstruction: lobar volume loss, fissure shift, increased density.
+              - Note technical/patient artifacts (motion blur, jewelry, grid lines).
+            3. Include **even subtle** or **incidental** findings — do not omit minor anomalies.
+            4. Examine all vertebral bodies and posterior elements for spina bifida, hemivertebrae, butterfly vertebrae, scoliosis, or any congenital or acquired defects, and report them if visible.
+            5. Do NOT describe normal structures unless needed to explain abnormalities.
+            6. Examine the entire image carefully for technical artifacts (grid lines, exposure banding, motion blur), patient artifacts (hair, skinfolds, hairbands, braids, clothing, ECG leads, oxygen tubing), overlying external objects (coins, jewelry, buttons, snaps).
+            7. Output strictly:
+              Anatomy
+              Abnormal Findings
+              Summary
+            Return only the structured text (no additional commentary).
+
+            Strict Rules:
+              1. Ignore any patient-identifiable information visible in the image (names, MRN, DOB, annotations, or labels). Do NOT include any of this in the report.
 `
         },
         {
@@ -67,13 +70,8 @@ export const analyzeMedicalImages_python = async (req, res) => {
       ]
     });
 
-
-
-    // console.log(response2.output_text, "444444444444444444444444444");
     const analysisResult = response?.output_text
 
-    // Save analysis to DB
-    // console.log("📄 Saving analysis to DB...");
     const analysisRecord = new Analysis({
       userId: req?.user?.id,
       id: Date.now().toString(),
@@ -81,7 +79,6 @@ export const analyzeMedicalImages_python = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
     await analysisRecord.save();
-    console.log("✅ Analysis saved:", analysisResult);
 
     return res.status(200).json({
       status: "success",
