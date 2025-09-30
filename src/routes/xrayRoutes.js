@@ -1,7 +1,7 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 // import upload from "../middleware/uploadMiddleware.js";
-import { analyzeMedicalImages, generateSpeech, translate, analyseByOpenAi, analyzeMedicalImages_python,analyzeMedicalRork } from "../controllers/xrayController.js";
+import { analyzeMedicalImages, generateSpeech, translate, analyseByOpenAi, analyzeMedicalImages_python } from "../controllers/xrayController.js";
 // import { uploadXray, cxrModel, cheXnetModel } from "../controllers/xrayController.js";
 
 import multer from "multer";

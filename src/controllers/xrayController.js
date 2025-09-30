@@ -2,142 +2,16 @@ import s3 from "../config/s3.js";
 import fs from "fs";
 import path from "path";
 import Analysis from "../models/Analysis.js";
-import { analyzeXray, analyzeXray_cxr } from "../services/aiService.js";
+import { analyzeXray } from "../services/aiService.js";
 import { generateSuggestion } from "../services/gptService.js";
 import fetch from "node-fetch";
 import OpenAI from "openai";
-import Tesseract from "tesseract.js";
-import { Groq } from 'groq-sdk';
-
-const groq = new Groq(
-  {
-    apiKey: process.env.GROK_API_KEY,
-  }
-);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// python screening 
-
-// export const analyzeMedicalImages_python = async (req, res) => {
-//   try {
-//     const base64Image = req.body.image;
-//     // console.log("📥 Incoming request for single image");
-
-//     if (!base64Image || typeof base64Image !== 'string') {
-//       console.warn("⚠️ No valid base64 image provided");
-//       return res.status(400).json({ msg: "No valid base64 image provided" });
-//     }
-
-//     // Helper function for analysis with retry
-//     const analyzeImage = async (base64Image, retryCount = 0) => {
-//       try {
-//         console.log(`🔎 Analyzing image, attempt ${retryCount + 1}`);
-
-//         const response = await fetch("https://toolkit.rork.com/text/llm/", {
-//           method: "POST",
-//           headers: { "Content-Type": "application/json" },
-//           body: JSON.stringify({
-//             messages: [
-//               {
-//                 role: "system",
-//                 content: `You are an expert senior radiologist. Analyze the provided image to determine if it is a medical image. If it is not a medical image, return only the text "This is not a medical image". If it is a medical image, identify ALL positive findings or abnormalities present (e.g., fractures (specify location and type), pneumonia, lung effusion, implants (specify type like pacemaker, surgical wire, ..etc), artifacts, tumors, infections, calcifications, cardiomegaly, pleural effusion, atelectasis, consolidation, nodules, masses, emphysema, fibrosis, cysts, foreign bodies, bone abnormalities, joint issues, or any other pathological findings). Return only the positive abnormalities with their confidence percentages in a concise, comma-separated format, e.g., "pneumonia - 60%, lung effusion - 60%", "implant (pacemaker) - 70%", "artifact - 50%", "tumor (lung mass) - 45%, cardiomegaly - 80%". Do NOT include negative findings (e.g., "no fracture", "no cardiomegaly") or normal results. If no positive abnormalities are detected, return only "No abnormalities detected". Do not include explanations or additional details.`
-//               },
-//               {
-//                 role: "user",
-//                 content: [
-//                   { type: "image", image: base64Image },
-//                   { type: "text", text: `Analyze this image and report if it is not a medical image or list ONLY positive abnormalities with confidence percentages.` }
-//                 ]
-//               }
-//             ]
-//           })
-//         });
-
-//         if (!response.ok) {
-//           console.error(`❌ API error:`, response.status, await response.text());
-//           return null;
-//         }
-
-//         const data = await response.json();
-//         console.log(`✅ Raw API response:`, JSON.stringify(data, null, 2));
-
-//         const completion = data.completion?.trim();
-//         if (!completion) {
-//           console.warn(`⚠️ Empty completion`);
-//           return null;
-//         }
-
-//         if (completion.toLowerCase() === "this is not a medical image" || completion.toLowerCase().includes("not a medical image")) {
-//           console.log(`ℹ️ Image flagged as non-medical`);
-//           return "This is not a medical image";
-//         }
-
-//         // Ensure only positive findings or "No abnormalities detected" is returned
-//         if (completion.toLowerCase().includes("no abnormalities detected")) {
-//           return "No abnormalities detected";
-//         }
-
-//         // Filter out any negative findings if present in the response
-//         const positiveFindings = completion
-//           .split(',')
-//           .map(finding => finding.trim())
-//           .filter(finding => !finding.toLowerCase().startsWith('no '))
-//           .join(', ');
-
-//         return positiveFindings || "No abnormalities detected";
-//       } catch (err) {
-//         console.error(`💥 Error analyzing image:`, err);
-//         if (retryCount < 1) {
-//           console.log(`🔄 Retrying image`);
-//           return await analyzeImage(base64Image, retryCount + 1);
-//         }
-//         return null;
-//       }
-//     };
-
-//     // Analyze single image
-//     console.log("🚀 Starting image analysis...");
-//     const analysisResult = await analyzeImage(base64Image);
-
-//     if (!analysisResult) {
-//       console.warn("⚠️ No valid analysis detected");
-//       return res.status(400).json({ msg: "Failed to analyze image. Please upload a valid image." });
-//     }
-
-//     // Save analysis to DB
-//     console.log("📄 Saving analysis to DB...");
-//     const analysisRecord = new Analysis({
-//       userId: req?.user?.id,
-//       id: Date.now().toString(),
-//       analysisResult: analysisResult,
-//       timestamp: new Date().toISOString(),
-//     });
-//     await analysisRecord.save();
-//     console.log("✅ Analysis saved:", analysisResult);
-
-//     let message = "Medical image analysis completed";
-//     if (analysisResult === "This is not a medical image") {
-//       message = "Non-medical image detected";
-//     } else if (analysisResult === "No abnormalities detected") {
-//       message = "No abnormalities detected in the medical image";
-//     }
-
-//     return res.status(200).json({
-//       status: "success",
-//       message: message,
-//       data: analysisResult,
-//     });
-
-//   } catch (err) {
-//     console.error("💥 analyzeMedicalImages fatal error:", err);
-//     res.status(500).json({ msg: "Failed to analyze image" });
-//   }
-// };
-
-
+// Python Api For List Of Findings
 export const analyzeMedicalImages_python = async (req, res) => {
   try {
     const base64Image = req.body.image;
@@ -148,90 +22,45 @@ export const analyzeMedicalImages_python = async (req, res) => {
       return res.status(400).json({ msg: "No valid base64 image provided" });
     }
 
-    // Helper function for analysis with retry
-    const analyzeImage = async (base64Image, retryCount = 0) => {
-      try {
-        // console.log(`🔎 Analyzing image, attempt ${retryCount + 1}`);
-
-        const messages = [
-          {
-            "role": "system",
-            "content": "You are an assistant that carefully describes what is visible in images, including abnormalities or devices, in a structured and professional way, without giving medical advice or diagnosis. Report only visible details."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
-              { type: "text", text: "I am a Trainee Radiologist generate report with all possible pathologies, implants, and fractures along with hardware's/Artefacts/Implants in the image for decision support. Generate a structured radiology report from this chest X-ray for decision support." }
-            ]
-          }
-        ];
-
-        // Call OpenAI Chat Completion API
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o",   // use multimodal model
-          messages,
-          temperature: 0.1,
-        });
-
-        const result = response.choices[0].message.content.trim();
-        // console.log("✅ API analysis result:", result);
-
-        return result || "No significant findings observed - 80%";
-
-      } catch (err) {
-        console.error(`💥 Error analyzing image:`, err);
-        if (retryCount < 2) {
-          // console.log(`🔄 Retrying image analysis`);
-          return await analyzeImage(base64Image, retryCount + 1);
-        }
-        return null;
-      }
-    };
-
-    // console.log("🚀 Starting image analysis...");
-    // const analysisResult = await analyzeImage(base64Image);
-
-    // if (!analysisResult) {
-    //   console.warn("⚠️ No valid analysis detected");
-    //   return res.status(400).json({ msg: "Failed to analyze image. Please upload a valid image." });
-    // }
-
-
-
-    const response2 = await openai.responses.create({
-      model: "gpt-4.1-mini",
+    const response = await openai.responses.create({
+      model: "gpt-4.1-2025-04-14",
       input: [
+        {
+          role: "system",
+          content: `
+
+    You are an assistant that generates structured radiology reports from X-ray images for decision support.
+
+    Rules:
+    1. Identify the BODY PART and VIEW.
+    2. Then list ONLY ABNORMAL / POSITIVE findings:
+      - Be thorough: check all ribs for congenital fusion (synostosis), fractures, deformities, including healed or remodeling fractures .
+      - Check bones, joints, lung fields, heart size/position, mediastinum, diaphragm, soft tissues.
+      - Report any implants, prostheses, devices, lines, catheters, calcifications, subcutaneous gas.
+      - Inspect for any radiopaque foreign body in trachea/bronchi or lung parenchyma.
+      - Look for indirect signs of bronchial obstruction: lobar volume loss, fissure shift, increased density.
+      - Note technical/patient artifacts (motion blur, jewelry, grid lines).
+    3. Include **even subtle** or **incidental** findings — do not omit minor anomalies.
+    4. Examine all vertebral bodies and posterior elements for spina bifida, hemivertebrae, butterfly vertebrae, scoliosis, or any congenital or acquired defects, and report them if visible.
+    5. Do NOT describe normal structures unless needed to explain abnormalities.
+    6. Examine the entire image carefully for technical artifacts (grid lines, exposure banding, motion blur), patient artifacts (hair, hairbands, braids, clothing, ECG leads, oxygen tubing), overlying external objects (coins, jewelry, buttons, snaps).
+    7. Output strictly:
+      Anatomy
+      Abnormal Findings
+      Summary
+    Return only the structured text (no additional commentary).
+`
+        },
         {
           role: "user",
           content: [
             {
               type: "input_text",
-              text: `
-                  You are assisting as a radiology scribe. Analyze the uploaded X-ray carefully.  
-
-                  **Instructions:**  
-                  1. First, identify and state the **body part imaged** (e.g., chest, leg, knee joint, pelvis, skull).  
-                  2. List **only positive findings / abnormalities** visible in the image.  
-                    - Include fractures, dislocations, pathologies, joint effusions, implants, metallic devices, hardware, soft tissue abnormalities, and any artifacts (grid lines, hair, motion blur, etc.).  
-                    - Do not include normal structures or negative statements.  
-                  3. For each finding, provide a **confidence percentage** (e.g., “~85% confident”).  
-                  4. Be concise and structured.  
-                  5. If no abnormalities are seen, state: **"No positive findings detected with high confidence."**  
-
-                  **Output format example:**  
-                  Body Part: Chest  
-                  Findings:  
-                  - Right lower lobe pneumonia (~87% confident)  
-                  - Left pleural effusion (~80% confident)  
-                  - Possible pacemaker lead artifact (~75% confident)  
-
-                  End output after listing findings, without extra narrative text.  
-        `
+              text: "Analyze this X-ray and provide the structured output (Anatomy → Abnormal Findings → Summary) per instructions."
             },
             {
               type: "input_image",
-              image_url: `data:image/jpeg;base64,${base64Image}`,
+              image_url: `data:image/jpeg;base64,${base64Image}`
             }
           ]
         }
@@ -239,24 +68,25 @@ export const analyzeMedicalImages_python = async (req, res) => {
     });
 
 
-    // console.log(response2.output_text, "444444444444444444444444444");
-    const result41 = response2?.output_text
 
-    // // Save analysis to DB
+    // console.log(response2.output_text, "444444444444444444444444444");
+    const analysisResult = response?.output_text
+
+    // Save analysis to DB
     // console.log("📄 Saving analysis to DB...");
-    // const analysisRecord = new Analysis({
-    //   userId: req?.user?.id,
-    //   id: Date.now().toString(),
-    //   analysisResult: analysisResult,
-    //   timestamp: new Date().toISOString(),
-    // });
-    // await analysisRecord.save();
-    // console.log("✅ Analysis saved:", analysisResult);
+    const analysisRecord = new Analysis({
+      userId: req?.user?.id,
+      id: Date.now().toString(),
+      analysisResult: analysisResult,
+      timestamp: new Date().toISOString(),
+    });
+    await analysisRecord.save();
+    console.log("✅ Analysis saved:", analysisResult);
 
     return res.status(200).json({
       status: "success",
       message: "Radiology draft report generated",
-      data: result41,
+      data: analysisResult,
     });
 
   } catch (err) {
@@ -265,7 +95,7 @@ export const analyzeMedicalImages_python = async (req, res) => {
   }
 };
 
-
+// Roak Api for analysis
 export const analyzeMedicalImages = async (req, res) => {
   try {
     const base64Images = req.body.images;
@@ -464,78 +294,6 @@ export const analyzeMedicalImages = async (req, res) => {
 };
 
 
-
-// grok
-export const analyzeMedicalRork = async (req, res) => {
-  try {
-    const base64Image = req.body.image;
-    // console.log("📥 Incoming request for single image");
-
-    if (!base64Image || typeof base64Image !== "string") {
-      console.warn("⚠️ No valid base64 image provided");
-      return res.status(400).json({ msg: "No valid base64 image provided" });
-    }
-
-    const chatCompletion = await groq.chat.completions.create({
-      "messages": [
-        {
-          "role": "user",
-          "content": [
-            {
-              "type": "text",
-              "text": `
-              I am a trainee radiologist. Generate a comprehensive chest radiograph report 
-              for decision support. 
-              Very important: 
-              - Comment explicitly on ANY radiopaque or metallic-looking object, no matter how small, 
-              even if it could be an artefact, foreign body, marker, or implant. 
-              - If something looks ambiguous, list possible differentials (e.g., surgical clip vs. external artefact).
-              - Do not omit such findings.
-              Include sections:
-              1. Patient Information
-              2. Examination Type, Date, Technique
-              3. Osseous structures and fractures (including occult possibilities)
-              4. Soft tissues and trachea/airway
-              5. Heart and mediastinum (with differentials)
-              6. Lungs and pleura (with infectious, neoplastic, inflammatory, vascular, traumatic differentials)
-              7. Diaphragm and abdomen (visualized portion)
-              8. Hardware/Artefacts/Implants (MANDATORY: mention if seen, suspected, or none)
-              9. Impression (with subtle findings highlighted)
-              10. Recommendations
-              Make sure every section is filled, even if findings are normal.
-              `
-
-            },
-            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
-
-          ]
-        }
-      ],
-      "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-      // "temperature": 1,
-      // "max_completion_tokens": 1024,
-      "top_p": 1,
-      "stream": false,
-      "stop": null,
-      "temperature": 0.2,
-      "max_completion_tokens": 2048
-
-    });
-
-    // console.log(chatCompletion.choices[0].message.content, "chatCompletionchatCompletionchatCompletionchatCompletion");
-
-    const result = chatCompletion.choices[0].message.content || "No findings.";
-    // console.log("✅ API analysis result:", result);
-
-    res.json({ report: result });
-  } catch (err) {
-    console.error("💥 analyzeMedicalImages fatal error:", err);
-    res.status(500).json({ msg: "Failed to analyze image" });
-  }
-};
-
-
-
 // OpenAI
 export const analyseByOpenAi = async (req, res) => {
   try {
@@ -567,16 +325,23 @@ export const analyseByOpenAi = async (req, res) => {
                   3. Detect **all imaging artifacts**, including grid lines, patient hair, or technical artifacts. For each artifact, describe **type, location, orientation, and approximate size if visible**.  
                   4. Include **subtle, incidental, or partially visible findings**, and do not omit small devices, ambiguous foreign bodies, or minor lab abnormalities.  
                   5. If uncertain about a finding, implant, or artifact, provide possible differentials (e.g., surgical clip vs. external object, benign vs. malignant lab anomaly). 
+                  6. check all the abnormal posssibilities like:
+                      - Be thorough: check all ribs for congenital fusion (synostosis), fractures, deformities, including healed or remodeling fractures .
+                      - Check bones, joints, lung fields, heart size/position, mediastinum, diaphragm, soft tissues.
+                      - Report any implants, prostheses, devices, lines, catheters, calcifications, subcutaneous gas.
+                      - Inspect for any radiopaque foreign body in trachea/bronchi or lung parenchyma.
+                      - Look for indirect signs of bronchial obstruction: lobar volume loss, fissure shift, increased density.
+                      - Note technical/patient artifacts (motion blur, jewelry, grid lines).
                   6. If any input is non-medical, respond with **"This is not a medical image/document"** for that item only.
 
 
                   Output separately for each input:
 
-                  **Item 1:**  
+                  **Image 1:**  
                   **Doctor-Level Explanation**: Professional, detailed paragraph describing modality (or document type), orientation, bones, soft tissues, relevant organs, implants (explicitly mention any metallic devices), fractures, foreign bodies, artifacts (with location, orientation, and size), lab abnormalities, and subtle or incidental findings.  
                   **Layman-Friendly Explanation**: Clear, simple paragraph explaining the same findings in plain language. Use analogies for devices (e.g., “a small patch inside the heart”), fractures, foreign bodies, or lab abnormalities. Describe artifacts simply (“lines from the scanner” or “hair over the image”). Reassure for benign findings and highlight urgent findings.  
 
-                  **Item 2:** Repeat same structure for each additional input.  
+                  **Image 2:** Repeat same structure for each additional input.  
 
                   End with this exact disclaimer:  
                   This is a computer-generated response and not a replacement for professional medical advice.
@@ -587,9 +352,6 @@ export const analyseByOpenAi = async (req, res) => {
         }
       ]
     });
-
-
-
 
 
     const result = response?.output_text;
