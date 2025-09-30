@@ -43,7 +43,7 @@ export const analyzeMedicalImages_python = async (req, res) => {
     3. Include **even subtle** or **incidental** findings — do not omit minor anomalies.
     4. Examine all vertebral bodies and posterior elements for spina bifida, hemivertebrae, butterfly vertebrae, scoliosis, or any congenital or acquired defects, and report them if visible.
     5. Do NOT describe normal structures unless needed to explain abnormalities.
-    6. Examine the entire image carefully for technical artifacts (grid lines, exposure banding, motion blur), patient artifacts (hair, hairbands, braids, clothing, ECG leads, oxygen tubing), overlying external objects (coins, jewelry, buttons, snaps).
+    6. Examine the entire image carefully for technical artifacts (grid lines, exposure banding, motion blur), patient artifacts (hair, skinfolds, hairbands, braids, clothing, ECG leads, oxygen tubing), overlying external objects (coins, jewelry, buttons, snaps).
     7. Output strictly:
       Anatomy
       Abnormal Findings
@@ -292,7 +292,6 @@ export const analyzeMedicalImages = async (req, res) => {
     res.status(500).json({ msg: "Failed to analyze images" });
   }
 };
-
 
 // OpenAI
 export const analyseByOpenAi = async (req, res) => {
